@@ -82,6 +82,8 @@ def post_create(request):
     print("mili"+str(millis))
     work = request.POST.get('work')
     progress =request.POST.get('progress')
+    url = request.POST.get('url')
+
 
     idtoken= request.session['uid']
     a = auth.get_account_info(idtoken)
@@ -91,8 +93,71 @@ def post_create(request):
     print("info"+str(a))
     data = {
         "work":work,
-        'progress':progress
+        'progress':progress,
+        'url':url
     }
+    database.child('users').child(a).child('reports').child(millis).set(data)
     database.child('users').child(a).child('reports').child(millis).set(data)
     name = database.child('users').child(a).child('details').child('name').get().val()
     return render(request,'welcome.html', {'e':name})    
+
+def check(request):
+    import datetime
+    idtoken = request.session['uid']
+    a = auth.get_account_info(idtoken)
+    a = a['users']
+    a = a[0]
+    a = a['localId']
+
+    timestamps = database.child('users').child(a).child('reports').shallow().get().val()
+    lis_time=[]
+    for i in timestamps:
+
+        lis_time.append(i)
+
+    lis_time.sort(reverse=True)
+
+    print(lis_time)
+    work = []
+
+    for i in lis_time:
+
+        wor=database.child('users').child(a).child('reports').child(i).child('work').get().val()
+        work.append(wor)
+    print(work)
+
+    date=[]
+    for i in lis_time:
+        i = float(i)
+        dat = datetime.datetime.fromtimestamp(i).strftime('%H:%M %d-%m-%Y')
+        date.append(dat)
+
+    print(date)
+
+    comb_lis = zip(lis_time,date,work)
+    name = database.child('users').child(a).child('details').child('name').get().val()
+
+    return render(request,'check.html',{'comb_lis':comb_lis,'e':name})
+
+
+def post_check(request):
+
+    import datetime
+
+    time = request.GET.get('z')
+
+    idtoken = request.session['uid']
+    a = auth.get_account_info(idtoken)
+    a = a['users']
+    a = a[0]
+    a = a['localId']
+
+    work =database.child('users').child(a).child('reports').child(time).child('work').get().val()
+    progress =database.child('users').child(a).child('reports').child(time).child('progress').get().val()
+    img_url = database.child('users').child(a).child('reports').child(time).child('url').get().val()
+    print(img_url)
+    i = float(time)
+    dat = datetime.datetime.fromtimestamp(i).strftime('%H:%M %d-%m-%Y')
+    name = database.child('users').child(a).child('details').child('name').get().val()
+
+    return render(request,'post_check.html',{'w':work,'p':progress,'d':dat,'e':name,'i':img_url})
